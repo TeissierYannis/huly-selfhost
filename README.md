@@ -438,6 +438,77 @@ self-hosted Huly, perform the following steps:
 
 Note that the `LIVEKIT_HOST` should include the protocol (`wss://` by default if using livekit cloud).
 
+## HulyPulse (Push / real-time updates)
+
+HulyPulse provides WebSocket push notifications and real-time updates.
+It will allow the following functions to work:
+- The knock and invite features in video calls
+- Information about who is viewing/editing objects right now
+- Shows that someone is typing a message in a chat.
+
+Since Huly platform version `v0.7.375`, HulyPulse supports an **in-memory backend**.
+By default, templates in this repository use:
+
+- `HULY_BACKEND=memory`
+
+This mode does not require Redis and is suitable for single-node or small self-hosted deployments.
+
+### Enabling HulyPulse (in-memory backend)
+
+1. Enable HulyPulse in `compose.yml`:
+   - Uncomment the `hulypulse` service.
+
+2. Configure the `transactor` service:
+
+    ```yaml
+    transactor:
+      ...
+      environment:
+        - PULSE_URL=http://hulypulse:8099
+      ...
+    ```
+
+3. Configure the `front` service:
+
+    ```yaml
+    front:
+      ...
+      environment:
+        - PULSE_URL=http${SECURE:+s}://${HOST_ADDRESS}/_pulse
+      ...
+    ```
+
+4. Uncomment the `/_pulse` location in `.huly.nginx` and reload nginx:
+
+    ```bash
+    sudo nginx -s reload
+    ```
+
+5. Recreate and start the stack from the `huly-selfhost` folder:
+
+    ```bash
+    docker compose up -d --force-recreate
+    ```
+
+### Using Redis as backend (optional)
+
+Redis can be used as an alternative backend for HulyPulse – for example, in multi-node or higher-availability setups.
+
+1. Enable Redis and HulyPulse in `compose.yml`:
+   - Uncomment the `redis` service.
+   - Uncomment the `hulypulse` service.
+   - In the `hulypulse` environment, switch to Redis:
+
+     ```yaml
+     - HULY_BACKEND=redis
+     - HULY_REDIS_MODE=direct
+     - HULY_REDIS_URLS=redis://redis:6379
+     # or with password:
+     # - HULY_REDIS_URLS=redis://:YOUR_PASSWORD@redis:6379
+     ```
+
+2. Redis is configured with a 512 MB memory limit by default in the provided `compose.yml`. Adjust limits, password, and URLs as needed for your production setup. The image tag uses `HULY_PULSE_VERSION` if set (default `0.1.29`).
+
 ## Print Service
 
 1. Add `print` container to the docker-compose.yaml
